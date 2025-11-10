@@ -1,0 +1,174 @@
+Practical No: 2
+Pass1.java file
+import java.io.*;
+import java.util.*;
+public class Pass1 {
+ static List<String> MDT = new ArrayList<>();
+ static Map<String, Integer> MNT = new LinkedHashMap<>();
+ static Map<String, List<String>> ARGLIST = new HashMap<>();
+ public static void main(String[] args) throws IOException {
+ BufferedReader br = new BufferedReader(new FileReader("input.asm"));
+ BufferedWriter intermediate = new BufferedWriter(new FileWriter("intermediate.txt"));
+ String line;
+ boolean inMacro = false;
+ int mdtIndex = 0;
+ String macroName = "";
+ List<String> argsList = new ArrayList<>();
+ while ((line = br.readLine()) != null) {
+ String[] tokens = line.trim().split("\\s+");
+ if (tokens.length == 0) continue;
+ if (tokens[0].equalsIgnoreCase("MACRO")) {
+ inMacro = true;
+ continue;
+ }
+ if (inMacro) {
+ macroName = tokens[0];
+ MNT.put(macroName, mdtIndex);
+ // Store arguments
+ argsList = new ArrayList<>();
+ for (int i = 1; i < tokens.length; i++) {
+ argsList.add(tokens[i]);
+ }
+ ARGLIST.put(macroName, argsList);
+ MDT.add(line.trim());
+ mdtIndex++;
+ while (!(line = br.readLine()).trim().equalsIgnoreCase("MEND")) {
+ MDT.add(line.trim());
+ mdtIndex++;
+ }
+ MDT.add("MEND");
+ mdtIndex++;
+ inMacro = false;
+ continue;
+ }
+ intermediate.write(line);
+ intermediate.newLine();
+ }
+ br.close();
+ intermediate.close();
+ // Write MDT
+ BufferedWriter mdtWriter = new BufferedWriter(new FileWriter("MDT.txt"));
+ for (int i = 0; i < MDT.size(); i++) {
+ mdtWriter.write(i + " " + MDT.get(i));
+ mdtWriter.newLine();
+ }
+ mdtWriter.close();
+ // Write MNT
+ BufferedWriter mntWriter = new BufferedWriter(new FileWriter("MNT.txt"));
+ for (Map.Entry<String, Integer> entry : MNT.entrySet()) {
+ mntWriter.write(entry.getKey() + " " + entry.getValue());
+ mntWriter.newLine();
+ }
+ mntWriter.close();
+ // Write ARGLIST
+ BufferedWriter argWriter = new BufferedWriter(new FileWriter("ARGLIST.txt"));
+ for (Map.Entry<String, List<String>> entry : ARGLIST.entrySet()) {
+ argWriter.write(entry.getKey() + " ");
+ for (String arg : entry.getValue()) {
+ argWriter.write(arg + " ");
+ }
+ argWriter.newLine();
+ }
+ argWriter.close();
+ System.out.println("PASS 1 Complete: MDT, MNT, and ARGLIST generated.");}}
+
+
+//After running Pass1 MDT.txt,MNT.txt,Intermediate.txt file build automatically
+//Pass2.java file
+
+
+import java.io.*;
+import java.util.*;
+public class Pass2 {
+ static List<String> MDT = new ArrayList<>();
+ static Map<String, Integer> MNT = new LinkedHashMap<>();
+ static Map<String, List<String>> ARGLIST = new HashMap<>();
+ public static void main(String[] args) throws IOException {
+ loadMDT();
+ loadMNT();
+ loadARGLIST();
+ BufferedReader intermediate = new BufferedReader(new FileReader("intermediate.txt"));
+ BufferedWriter output = new BufferedWriter(new FileWriter("final_output.asm"));
+ String line;
+ while ((line = intermediate.readLine()) != null) {
+ String[] tokens = line.trim().split("\\s+");
+ if (tokens.length == 0) continue;
+ String firstToken = tokens[0];
+ if (MNT.containsKey(firstToken)) {
+ int mdtIndex = MNT.get(firstToken);
+ // Get formal arguments
+ List<String> formalArgs = ARGLIST.get(firstToken);
+ // Get actual arguments
+ List<String> actualArgs = new ArrayList<>();
+ for (int i = 1; i < tokens.length; i++) {
+ actualArgs.add(tokens[i]);
+ }
+ // Prepare substitution map
+ Map<String, String> subMap = new HashMap<>();
+ for (int i = 0; i < formalArgs.size(); i++) {
+ subMap.put(formalArgs.get(i), actualArgs.get(i));
+ }
+ mdtIndex++; // skip macro prototype
+ while (!MDT.get(mdtIndex).equalsIgnoreCase("MEND")) {
+ String macroLine = MDT.get(mdtIndex);
+ for (String key : subMap.keySet()) {
+ macroLine = macroLine.replace(key, subMap.get(key));
+ }
+ output.write(macroLine);
+ output.newLine();
+ mdtIndex++;
+ }
+ } else {
+ output.write(line);
+ output.newLine();
+ }
+ }
+ intermediate.close();
+ output.close();
+ System.out.println("PASS 2 Complete: Final output with macro expansion and argument
+substitution generated.");
+ }
+ static void loadMDT() throws IOException {
+ BufferedReader mdtReader = new BufferedReader(new FileReader("MDT.txt"));
+ String line;
+ while ((line = mdtReader.readLine()) != null) {
+ MDT.add(line.substring(line.indexOf(' ') + 1));
+ }
+ mdtReader.close();
+ }
+ static void loadMNT() throws IOException {
+ BufferedReader mntReader = new BufferedReader(new FileReader("MNT.txt"));
+ String line;
+ while ((line = mntReader.readLine()) != null) {
+ String[] tokens = line.trim().split("\\s+");
+ MNT.put(tokens[0], Integer.parseInt(tokens[1]));
+ }
+ mntReader.close();
+ }
+ static void loadARGLIST() throws IOException {
+ BufferedReader argReader = new BufferedReader(new FileReader("ARGLIST.txt"));
+ String line;
+ while ((line = argReader.readLine()) != null) {
+ String[] tokens = line.trim().split("\\s+");
+ List<String> args = new ArrayList<>();
+ for (int i = 1; i < tokens.length; i++) {
+ args.add(tokens[i]);
+ }
+ ARGLIST.put(tokens[0], args);
+ }
+ argReader.close();
+ }
+}
+
+
+
+
+Input.asm file
+
+MACRO
+INCR &ARG
+ADD &ARG, ONE
+MEND
+START
+INCR A
+END

@@ -1,0 +1,111 @@
+//Practical No: 4
+
+import java.util.*;
+public class PageReplacementSimulator {
+ public static void main(String[] args) {
+ Scanner sc = new Scanner(System.in);
+ System.out.print("Enter number of frames: ");
+ int frames = sc.nextInt();
+ System.out.print("Enter length of reference string: ");
+ int n = sc.nextInt();
+ int[] ref = new int[n];
+ System.out.println("Enter the reference string:");
+ for (int i = 0; i < n; i++) {
+ ref[i] = sc.nextInt();
+ }
+ System.out.println("\n--- FIFO Page Replacement ---");
+ fifo(ref, frames);
+ System.out.println("\n--- LRU Page Replacement ---");
+ lru(ref, frames);
+ System.out.println("\n--- Optimal Page Replacement ---");
+ optimal(ref, frames);
+ sc.close();
+ }
+ // FIFO Implementation
+ static void fifo(int[] ref, int frames) {
+ Set<Integer> memory = new LinkedHashSet<>(); // preserves insertion order
+ Queue<Integer> queue = new LinkedList<>();
+ int faults = 0;
+ for (int page : ref) {
+ if (!memory.contains(page)) {
+ if (memory.size() == frames) {
+ int removed = queue.poll();
+ memory.remove(removed);
+ }
+ memory.add(page);
+ queue.add(page);
+ faults++;
+ }
+ printMemory(memory);
+ }
+ System.out.println("Total Page Faults: " + faults);
+ System.out.println("Total Page Hits : " + (ref.length - faults));
+ }
+ // LRU Implementation
+ static void lru(int[] ref, int frames) {
+ List<Integer> memory = new ArrayList<>();
+ int faults = 0;
+ for (int page : ref) {
+ if (memory.contains(page)) {
+ memory.remove((Integer) page); // remove to move it to MRU
+ } else {
+ if (memory.size() == frames) {
+ memory.remove(0); // remove LRU
+ }
+ faults++;
+ }
+ memory.add(page); // add as MRU
+ printMemory(memory);
+ }
+ System.out.println("Total Page Faults: " + faults);
+ System.out.println("Total Page Hits : " + (ref.length - faults));
+ }
+ // Optimal Implementation
+ static void optimal(int[] ref, int frames) {
+ List<Integer> memory = new ArrayList<>();
+ int faults = 0;
+ for (int i = 0; i < ref.length; i++) {
+ int page = ref[i];
+ if (!memory.contains(page)) {
+ if (memory.size() == frames) {
+ int indexToReplace = getOptimalIndex(memory, ref, i + 1);
+ memory.set(indexToReplace, page);
+ } else {
+ memory.add(page);
+ }
+ faults++;
+ }
+ printMemory(memory);
+ }
+ System.out.println("Total Page Faults: " + faults);
+ System.out.println("Total Page Hits : " + (ref.length - faults));
+ }
+ static int getOptimalIndex(List<Integer> memory, int[] ref, int start) {
+ int index = -1;
+ int farthest = start;
+ for (int i = 0; i < memory.size(); i++) {
+ int page = memory.get(i);
+ int j;
+ for (j = start; j < ref.length; j++) {
+ if (ref[j] == page) {
+ if (j > farthest) {
+ farthest = j;
+ index = i;
+ }
+ break;
+ }
+ }
+ if (j == ref.length) {
+ return i; // page not used again
+ }
+ }
+ return index == -1 ? 0 : index;
+ }
+ static void printMemory(Collection<Integer> memory) {
+ System.out.print("Frames: ");
+ for (int page : memory) {
+ System.out.print(page + " ");
+ }
+ System.out.println();
+ }
+}

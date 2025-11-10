@@ -1,0 +1,163 @@
+//Practical No: 3
+
+import java.util.*;
+class Process {
+ int pid, arrivalTime, burstTime, remainingTime, completionTime, waitingTime,
+turnaroundTime, priority;
+ boolean isCompleted = false;
+ Process(int pid, int arrivalTime, int burstTime, int priority) {
+ this.pid = pid;
+ this.arrivalTime = arrivalTime;
+ this.burstTime = burstTime;
+ this.remainingTime = burstTime;
+ this.priority = priority;
+ }
+}
+public class CPUSchedulingSimulator {
+ static Scanner sc = new Scanner(System.in);
+ public static void main(String[] args) {
+ List<Process> processes = getProcessInput();
+ System.out.println("\n===== First Come First Serve (FCFS) =====");
+ fcfs(copyProcesses(processes));
+ System.out.println("\n===== Shortest Job First (SJF - Preemptive) =====");
+ sjfPreemptive(copyProcesses(processes));
+ System.out.println("\n===== Priority Scheduling (Non-Preemptive) =====");
+ priorityScheduling(copyProcesses(processes));
+ System.out.println("\n===== Round Robin (Preemptive) =====");
+ System.out.print("Enter Time Quantum: ");
+ int quantum = sc.nextInt();
+ roundRobin(copyProcesses(processes), quantum);
+ }
+ // Helper method to copy process list
+ static List<Process> copyProcesses(List<Process> original) {
+ List<Process> copy = new ArrayList<>();
+ for (Process p : original) {
+ copy.add(new Process(p.pid, p.arrivalTime, p.burstTime, p.priority));
+ }
+ return copy;
+ }
+ static List<Process> getProcessInput() {
+ System.out.print("Enter number of processes: ");
+ int n = sc.nextInt();
+ List<Process> processes = new ArrayList<>();
+ for (int i = 0; i < n; i++) {
+ System.out.println("Enter Arrival Time, Burst Time, and Priority for Process " + (i + 1)
++ ":");
+ int at = sc.nextInt();
+ int bt = sc.nextInt();
+ int pr = sc.nextInt();
+ processes.add(new Process(i + 1, at, bt, pr));
+ }
+ return processes;
+ }
+ static void fcfs(List<Process> processes) {
+ processes.sort(Comparator.comparingInt(p -> p.arrivalTime));
+ int currentTime = 0;
+ for (Process p : processes) {
+ currentTime = Math.max(currentTime, p.arrivalTime);
+ p.completionTime = currentTime + p.burstTime;
+ currentTime = p.completionTime;
+ p.turnaroundTime = p.completionTime - p.arrivalTime;
+ p.waitingTime = p.turnaroundTime - p.burstTime;
+ }
+ printResults(processes);
+ }
+ static void sjfPreemptive(List<Process> processes) {
+ int n = processes.size(), completed = 0, time = 0;
+ while (completed < n) {
+ Process shortest = null;
+ int minTime = Integer.MAX_VALUE;
+ for (Process p : processes) {
+ if (p.arrivalTime <= time && !p.isCompleted && p.remainingTime < minTime) {
+ minTime = p.remainingTime;
+ shortest = p;
+ }
+ }
+ if (shortest == null) {
+ time++;
+ continue;
+ }
+ shortest.remainingTime--;
+ time++;
+ if (shortest.remainingTime == 0) {
+ shortest.isCompleted = true;
+ shortest.completionTime = time;
+ shortest.turnaroundTime = shortest.completionTime - shortest.arrivalTime;
+ shortest.waitingTime = shortest.turnaroundTime - shortest.burstTime;
+ completed++;
+ }
+ }
+ printResults(processes);
+ }
+ static void priorityScheduling(List<Process> processes) {
+ int time = 0, completed = 0;
+ while (completed < processes.size()) {
+ Process highest = null;
+ for (Process p : processes) {
+ if (p.arrivalTime <= time && !p.isCompleted) {
+ if (highest == null || p.priority < highest.priority) {
+ highest = p;
+ }
+ }
+ }
+ if (highest == null) {
+ time++;
+ continue;
+ }
+ time += highest.burstTime;
+ highest.completionTime = time;
+ highest.turnaroundTime = highest.completionTime - highest.arrivalTime;
+ highest.waitingTime = highest.turnaroundTime - highest.burstTime;
+ highest.isCompleted = true;
+ completed++;
+ }
+ printResults(processes);
+ }
+ static void roundRobin(List<Process> processes, int quantum) {
+ Queue<Process> queue = new LinkedList<>();
+ int time = 0, completed = 0;
+ processes.sort(Comparator.comparingInt(p -> p.arrivalTime));
+ int i = 0;
+ while (completed < processes.size()) {
+ while (i < processes.size() && processes.get(i).arrivalTime <= time) {
+ queue.add(processes.get(i));
+ i++;
+ }
+ if (queue.isEmpty()) {
+ time++;
+ continue;
+ }
+ Process current = queue.poll();
+ int execTime = Math.min(current.remainingTime, quantum);
+ current.remainingTime -= execTime;
+ time += execTime;
+ while (i < processes.size() && processes.get(i).arrivalTime <= time) {
+ queue.add(processes.get(i));
+ i++;
+ }
+ if (current.remainingTime > 0) {
+ queue.add(current);
+ } else {
+ current.completionTime = time;
+ current.turnaroundTime = current.completionTime - current.arrivalTime;
+ current.waitingTime = current.turnaroundTime - current.burstTime;
+ completed++;
+ }
+ }
+ printResults(processes);
+ }
+ static void printResults(List<Process> processes) {
+ System.out.printf("\n%-10s%-15s%-15s%-15s%-15s%-15s\n",
+ "PID", "Arrival", "Burst", "Completion", "Turnaround", "Waiting");
+ double totalTAT = 0, totalWT = 0;
+ for (Process p : processes) {
+ System.out.printf("%-10d%-15d%-15d%-15d%-15d%-15d\n",
+ p.pid, p.arrivalTime, p.burstTime, p.completionTime, p.turnaroundTime,
+p.waitingTime);
+ totalTAT += p.turnaroundTime;
+ totalWT += p.waitingTime;
+ }
+ System.out.printf("\nAverage Turnaround Time: %.2f\n", totalTAT / processes.size());
+ System.out.printf("Average Waiting Time : %.2f\n", totalWT / processes.size());
+ }
+}
