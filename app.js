@@ -16,7 +16,7 @@ app.get('/', (req, res) => {
 
 // ✅ Send Java code file content
 app.get('/vk1', (req, res) => {
-  const javaPath = __dirname + '/P1.java';
+  const javaPath = __dirname + '/P1.txt';
   fs.readFile(javaPath, 'utf8', (err, data) => {
     if (err) {
       return res.status(500).send('Error reading Java file.');
